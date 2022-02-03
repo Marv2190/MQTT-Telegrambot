@@ -8,6 +8,8 @@ import threading
 
 
 cerboserial = "123456789"# Ist auch gleich VRM Portal ID
+bottoken = "xxxx:xxxx"
+pvgruppenid = "-xxxx"
 acpower = 1
 dcpower = 1
 L1=1
@@ -25,9 +27,9 @@ akkuladen=1
 akkuspg=1
 zaehler=0
 num=0
-neuaufbau=2000
-
-bot = telebot.TeleBot("bot-token", parse_mode=None)
+neuaufbau=1
+lintgrid = 2
+bot = telebot.TeleBot(bottoken, parse_mode=None)
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -173,21 +175,30 @@ try:
     while (True):
         try:
 
-
-
-
-
             neuaufbau=neuaufbau +1
             print(neuaufbau)
+            print("Telegrambot läuft")
+            print(akku)
+            intgrid = int(grid)
+
+            if akku > 30:
+                if intgrid != lintgrid:
+                    lintgrid = intgrid
+                    intgrid = str(intgrid)
+                    if intgrid == "0" :
+                        print("Bitte kein Gerät mehr einschalten")
+                        bot.send_message(pvgruppenid, "Bitte kein Gerät mehr einschalten")
+                        continue
+                    print("Es kann noch " + intgrid + " Gerät eingeschalten werden")
+                    bot.send_message(pvgruppenid, "Es kann noch " + intgrid + " Gerät eingeschalten werden")
 
             time.sleep(30)
+
         except KeyboardInterrupt:
             print("STRG+C erkannt - beende")
             break
         except:
             print("Irgendwas ist in der whileschleife schief gelaufen ;( ")
-
-
 
     client.loop_stop()
 
