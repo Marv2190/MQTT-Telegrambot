@@ -178,7 +178,6 @@ try:
             neuaufbau=neuaufbau +1
             print(neuaufbau)
             print("Telegrambot läuft")
-            print(akku)
             intgrid = int(grid)
 
             if akku > 30:
