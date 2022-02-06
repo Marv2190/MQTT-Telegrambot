@@ -29,6 +29,7 @@ zaehler=0
 num=0
 neuaufbau=1
 lintgrid = 2
+strintgrid = "0"
 bot = telebot.TeleBot(bottoken, parse_mode=None)
 
 
@@ -96,19 +97,11 @@ def on_message(client, userdata, msg):
             akkuladen=int(akkuladen['value'])
             akkuladen = akkuladen /1000
 
-
         # print(acpower)
         # print(dcpower)
-        zaehler=zaehler+1
-        pvgesamt= acpower + dcpower
+        zaehler = zaehler+1
+        pvgesamt = acpower + dcpower
         hausverbrauch = (L1+L2+L3)/1000
-        #print(str(pvgesamt)+ "W PVgesamt")
-        #print(str(akkuladen)+ "W Akkuleistung")
-        #print(str(akku)+ "% Akku")
-        #print(str(grid)+ "W Grid")
-        #print(str(hausverbrauch)+ "W hausverbrauch")
-        #print(str(zaehler)+"x Funktion aufgerufen")
-        #print("-----------------------------------")
     except:
         print("Irgendwas ist hier ziemlich schief gelaufen")
 
@@ -126,70 +119,87 @@ def send_welcome(message):
 
 @bot.message_handler(commands=['help', "befehle"])
 def help(message):
-    bot.reply_to(message, "Befehle sind\n"
-    "/pv : Zeigt PV-Generation an\n"
-    "/soc : Zeigt den aktuellen Akkustand an\n"
-    "/hausverbrauch: Zeigt den aktuellen Hausverbrauch an\n"
-    "/netz: Zeigt W aus dem Netz an\n"
-    "/alles: Zeigt eine Übersicht aller Werte\n"
-    "/wieviele : Zeigt eine grobe Einschätzung wieviele Geräte bei aktueller Produktion eingeschaltet werden können")
+    bot.reply_to(message,
+        "Befehle sind\n"
+        "/pv : Zeigt PV-Generation an\n"
+        "/soc : Zeigt den aktuellen Akkustand an\n"
+        "/hausverbrauch: Zeigt den aktuellen Hausverbrauch an\n"
+        "/netz: Zeigt W aus dem Netz an\n"
+        "/alles: Zeigt eine Übersicht aller Werte\n"
+        "/wieviele : Zeigt eine grobe Einschätzung wieviele Geräte bei aktueller Produktion eingeschaltet werden können")
 
 @bot.message_handler(commands=['pv'])
 def send_pv(message):
     bot.reply_to(message, "Aktuelle PV Leistung: "+str(pvgesamt).replace('.',',')+"W")
+
 @bot.message_handler(commands=['soc'])
 def send_soc(message):
     bot.reply_to(message, "Aktueller SOC: "+str(akku).replace('.',',')+"%")
+
 @bot.message_handler(commands=['hausverbrauch'])
 def send_hausverbrauch(message):
     bot.reply_to(message, "Aktueller Verbrauch im Haus "+str(hausverbrauch).replace('.',',')+"kWh")
+
 @bot.message_handler(commands=['netz'])
 def netz(message):
-    bot.reply_to(message, "Wir beziehen "+str(grid).replace('.',',')+"kWh aus dem Netz")
+    if grid >= 0:
+        beziehenexport = "beziehen"
+    else:
+        beziehenexport = "exportieren"
+
+    bot.reply_to(message, "Wir" +beziehenexport + str(grid).replace('.',',').replace("-","") +"kWh aus dem Netz.")
+
 @bot.message_handler(commands=['alles'])
 def send_alles(message):
+    if strintgrid == "0":
+        aa = "Das bedeutet, dass am besten kein Gerät mehr zugeschaltet werden sollte!"
+    else:
+        aa = "Das bedeutet, dass etwa noch " + strintgrid + " Gerät(e) eingeschaltet werden können"
     bot.reply_to(message,
     "Aktuelle PV Leistung: "+str(pvgesamt).replace('.',',')+"W\n"
     "Aktueller SOC: "+str(akku).replace('.',',')+"%\n"
     "Aktueller Verbrauch im Haus "+str(hausverbrauch).replace('.',',')+"kWh\n"
-    "Wir beziehen "+str(grid).replace('.',',')+"kWh aus dem Netz"
+    "Wir beziehen "+str(grid).replace('.',',')+"kWh aus dem Netz.\n\n" + aa
     )
-@bot.message_handler(commands=['wieviel'])
-def send_wieviel(message):
-    bot.reply_to(message, "Befehle sind")
 
+@bot.message_handler(commands=['wieviele'])
+def send_wieviel(message):
+    if strintgrid == "0":
+        bot.reply_to(message, "Bitte kein Gerät mehr einschalten")
+    elif strintgrid == "1":
+        bot.reply_to(message, "Es kann noch ein Gerät eingeschalten werden")
+    else:
+        bot.reply_to(message, "Es können noch " + strintgrid + " Geräte eingeschalten werden")
 
 
 @bot.message_handler(func=lambda m: True)
 def echo_all(message):
     bot.reply_to(message, "Nicht unterstütze Aktion! Petra? :D")
 
-
-
 pollingthread = threading.Thread(target=bot.polling)
 pollingthread.start()
 
-
 try:
-
     while (True):
         try:
 
-            neuaufbau=neuaufbau +1
+            neuaufbau = neuaufbau + 1
             print(neuaufbau)
             print("Telegrambot läuft")
             intgrid = int(grid)
 
-            if akku > 30:
+            if akku > 70 and intgrid < 0:
                 if intgrid != lintgrid:
                     lintgrid = intgrid
-                    intgrid = str(intgrid)
-                    if intgrid == "0" :
+                    nintgrid = intgrid * -1
+                    strintgrid = str(nintgrid)
+                    if strintgrid == "0":
                         print("Bitte kein Gerät mehr einschalten")
                         bot.send_message(pvgruppenid, "Bitte kein Gerät mehr einschalten")
-                        continue
-                    print("Es kann noch " + intgrid + " Gerät eingeschalten werden")
-                    bot.send_message(pvgruppenid, "Es kann noch " + intgrid + " Gerät eingeschalten werden")
+                    elif strintgrid == "1":
+                        bot.reply_to(message, "Es kann noch ein Gerät eingeschalten werden")
+                    else:
+                        bot.reply_to(message, "Es können noch " + strintgrid + " Geräte eingeschalten werden")
 
             time.sleep(30)
 
