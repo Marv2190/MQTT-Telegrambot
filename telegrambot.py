@@ -21,7 +21,7 @@ akkuladen=1
 se=1
 ve=1
 akku=1
-grid=1
+grid=1337
 hausverbrauch =1
 akkuladen=1
 akkuspg=1
@@ -29,6 +29,7 @@ zaehler=0
 num=0
 neuaufbau=1
 lintgrid = 2
+nintgrid = 0
 strintgrid = "0"
 bot = telebot.TeleBot(bottoken, parse_mode=None)
 
@@ -143,23 +144,27 @@ def send_hausverbrauch(message):
 @bot.message_handler(commands=['netz'])
 def netz(message):
     if grid >= 0:
-        beziehenexport = "beziehen"
+        beziehenexport = " beziehen "
     else:
-        beziehenexport = "exportieren"
+        beziehenexport = " exportieren "
 
-    bot.reply_to(message, "Wir" +beziehenexport + str(grid).replace('.',',').replace("-","") +"kWh aus dem Netz.")
+    bot.reply_to(message, "Wir " +beziehenexport + str(grid).replace('.',',').replace("-","") +"kWh aus dem Netz.")
 
 @bot.message_handler(commands=['alles'])
 def send_alles(message):
     if strintgrid == "0":
-        aa = "Das bedeutet, dass am besten kein Gerät mehr zugeschaltet werden sollte!"
+        aa = "Das bedeutet, dass am besten kein Gerät mehr zugeschaltet werden sollte!\n"
     else:
-        aa = "Das bedeutet, dass etwa noch " + strintgrid + " Gerät(e) eingeschaltet werden können"
+        aa = "Das bedeutet, dass etwa noch " + strintgrid + " Geräte eingeschaltet werden können\n"
+    if grid >= 0:
+        bb= "Wir beziehen "+str(grid).replace('.',',')+"kWh aus dem Netz.\n\n"
+    else:
+        bb ="Wir exprotieren "+str(grid).replace('.',',').replace('-','')+"kWh zum Netz.\n\n"
     bot.reply_to(message,
     "Aktuelle PV Leistung: "+str(pvgesamt).replace('.',',')+"W\n"
     "Aktueller SOC: "+str(akku).replace('.',',')+"%\n"
-    "Aktueller Verbrauch im Haus "+str(hausverbrauch).replace('.',',')+"kWh\n"
-    "Wir beziehen "+str(grid).replace('.',',')+"kWh aus dem Netz.\n\n" + aa
+    "Aktueller Verbrauch im Haus "+str(hausverbrauch).replace('.',',')+"kWh\n" + bb + aa
+
     )
 
 @bot.message_handler(commands=['wieviele'])
@@ -167,9 +172,9 @@ def send_wieviel(message):
     if strintgrid == "0":
         bot.reply_to(message, "Bitte kein Gerät mehr einschalten")
     elif strintgrid == "1":
-        bot.reply_to(message, "Es kann noch ein Gerät eingeschalten werden")
+        bot.reply_to(message, "Es kann noch ein Gerät eingeschaltet werden")
     else:
-        bot.reply_to(message, "Es können noch " + strintgrid + " Geräte eingeschalten werden")
+        bot.reply_to(message, "Es können noch " + strintgrid + " Geräte eingeschaltet werden")
 
 
 @bot.message_handler(func=lambda m: True)
@@ -178,16 +183,17 @@ def echo_all(message):
 
 pollingthread = threading.Thread(target=bot.polling)
 pollingthread.start()
-
+print(str(grid) + "Grid")
 try:
     while (True):
+        time.sleep(10)
         try:
 
             neuaufbau = neuaufbau + 1
             print(neuaufbau)
             print("Telegrambot läuft")
             intgrid = int(grid)
-
+            print(intgrid, lintgrid, nintgrid)
             if akku > 70 and intgrid < 0:
                 if intgrid != lintgrid:
                     lintgrid = intgrid
@@ -195,19 +201,24 @@ try:
                     strintgrid = str(nintgrid)
                     if strintgrid == "0":
                         print("Bitte kein Gerät mehr einschalten")
-                        bot.send_message(pvgruppenid, "Bitte kein Gerät mehr einschalten")
+                        bot.send_message(pvgruppenid, "Bitte kein Gerät mehr einschalten, wir exportieren nicht mehr!")
                     elif strintgrid == "1":
-                        bot.reply_to(message, "Es kann noch ein Gerät eingeschalten werden")
+                        bot.send_message(pvgruppenid, "Wir speisen ein! Es kann noch ein Gerät eingeschalten werden")
                     else:
-                        bot.reply_to(message, "Es können noch " + strintgrid + " Geräte eingeschalten werden")
-
-            time.sleep(30)
+                        bot.send_message(pvgruppenid, "Wir speisen ein! Es können noch " + strintgrid + " Geräte eingeschalten werden")
+            else:
+                if lintgrid != 0:
+                    lintgrid = 0
+                    print("Bitte kein Gerät mehr einschalten")
+                    bot.send_message(pvgruppenid, "Bitte kein Gerät mehr einschalten")
+            time.sleep(900)
 
         except KeyboardInterrupt:
             print("STRG+C erkannt - beende")
             break
-        except:
+        except Exception as e:
             print("Irgendwas ist in der whileschleife schief gelaufen ;( ")
+            print(e)
 
     client.loop_stop()
 
@@ -216,5 +227,6 @@ except KeyboardInterrupt:
     print("\ninterrupted!")
     client.loop_stop()
 
-except:
+except Exception as e:
     print("Hier ist was schief gelaufen")
+    print(e)
